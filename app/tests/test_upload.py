@@ -1,20 +1,19 @@
 import pytest
-from pathlib import Path
-
+import tempfile
+from datetime import datetime
 
 def test_upload_csv(test_client, test_db):
-    # Prepare a temporary CSV file for testing
-    temp_csv = Path("/tmp/test.csv")
-    temp_csv.write_text("Date,Close\n2022-01-01,100\n2022-01-02,200\n")
+    # Create a temporary CSV file
+    with tempfile.NamedTemporaryFile(mode="w+", suffix=".csv", delete=False) as temp_csv:
+        temp_csv.write("Date,Close\n2022-01-01,100\n2022-01-02,200\n")
+        temp_csv_path = temp_csv.name
 
-    # Call the upload endpoint
-    response = test_client.post(f"/api/stocks/upload?file_path={temp_csv}")
+    with open(temp_csv_path, "rb") as file:
+        response = test_client.post("/api/stocks/upload", files={"file": file})
+
     assert response.status_code == 200
-    assert "uploaded and data inserted successfully" in response.json()["message"]
+    assert response.json()["message"] == "CSV file uploaded and data inserted successfully"
 
     # Verify data in the database
     stocks = list(test_db.stocks.find({"stock_symbol": "TEST"}))
     assert len(stocks) == 2
-
-    # Clean up temporary file
-    temp_csv.unlink()

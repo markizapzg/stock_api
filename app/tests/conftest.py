@@ -1,26 +1,24 @@
 import pytest
+from pymongo import MongoClient
 from fastapi.testclient import TestClient
 from app.main import app
-from pymongo import MongoClient
 
-
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="function")
 def test_client():
-    """Fixture for creating a FastAPI test client."""
-    return TestClient(app)
-
+    """Provide a test client for the FastAPI app."""
+    client = TestClient(app)
+    yield client
 
 @pytest.fixture(scope="function")
 def test_db():
-    """Fixture for connecting to a test MongoDB instance."""
-    client = MongoClient("mongodb://127.0.0.1:27017/")
+    """Set up a test MongoDB instance."""
+    client = MongoClient("mongodb://mongo:27017/")
     db = client["test_db"]
 
-    # Ensure the database is clean before running the test
+    # Ensure the database is clean before starting
     db.stocks.delete_many({})
 
-    yield db  # Provide the test database instance to the test
+    yield db
 
     # Clean up after the test
-    db.stocks.delete_many({})
     client.drop_database("test_db")
